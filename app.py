@@ -4,6 +4,7 @@ import json
 import pandas as pd
 import streamlit as st
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.neural_network import MLPClassifier
 from train_model import engineer, make_model, SPENDING
 
 BASE = Path(__file__).resolve().parent
@@ -57,7 +58,7 @@ def show_logo(path: Path, name: str):
 
 
 @st.cache_resource(show_spinner='Preparando el modelo de clasificación...')
-def load_model():
+def load_model(tipo_modelo):
     train = pd.read_csv(BASE / 'data' / 'train.csv', dtype={'PassengerId':'string'})
     test = pd.read_csv(BASE / 'data' / 'test.csv', dtype={'PassengerId':'string'})
     counts = pd.concat([train['PassengerId'], test['PassengerId']]).str.split('_').str[0].value_counts()
@@ -65,7 +66,15 @@ def load_model():
     y = train['Transported'].astype('string').str.upper().map({'TRUE':1, 'FALSE':0})
     if y.isna().any():
         raise ValueError('La variable objetivo Transported contiene valores inválidos.')
-    model = make_model(RandomForestClassifier(n_estimators=250, min_samples_leaf=2, n_jobs=-1, random_state=42))
+    if tipo_modelo == 'Red neuronal (MLP)':
+        estimator = MLPClassifier(hidden_layer_sizes=(64, 32), activation='relu',
+                                  solver='adam', alpha=0.001, batch_size=128,
+                                  max_iter=250, early_stopping=True,
+                                  n_iter_no_change=15, random_state=42)
+    else:
+        estimator = RandomForestClassifier(n_estimators=250, min_samples_leaf=2,
+                                            n_jobs=-1, random_state=42)
+    model = make_model(estimator)
     model.fit(x, y.astype(int))
     return model, counts, len(train)
 
@@ -92,15 +101,16 @@ if page == 'Portada':
         with b2:
             st.image(str(BANNER), use_container_width=True)
     st.markdown('## Presentación del proyecto')
-    st.markdown('''<div class="gold-card">Aplicación interactiva basada en el conjunto de datos <strong>Spaceship Titanic</strong>. Permite introducir características de un pasajero y estimar si fue transportado a otra dimensión. Incluye métricas de evaluación y una matriz de confusión.<p>El clasificador implementado actualmente es <strong>Random Forest</strong>; el título de la tarea es «Redes Neuronales», pero Random Forest no es una red neuronal.</p></div>''', unsafe_allow_html=True)
+    st.markdown('''<div class="gold-card">Aplicación interactiva basada en el conjunto de datos <strong>Spaceship Titanic</strong>. Permite introducir características de un pasajero y estimar si fue transportado a otra dimensión. Incluye métricas de evaluación y una matriz de confusión.<p>Se implementan dos algoritmos: <strong>Random Forest</strong> y una <strong>red neuronal MLP</strong> con capas ocultas de 64 y 32 neuronas.</p></div>''', unsafe_allow_html=True)
     a,b,c = st.columns(3)
-    with a: st.metric('Clasificador', 'Random Forest')
+    with a: st.metric('Modelos', 'Random Forest / MLP')
     with b: st.metric('Objetivo', 'Transported')
     with c: st.metric('Tipo de problema', 'Binario')
 
 elif page == 'Predicción':
     st.title('Predicción de pasajeros')
-    st.markdown('Introduce un perfil hipotético. Se utiliza el modelo Random Forest entrenado con los datos del proyecto.')
+    st.markdown('Introduce un perfil hipotético y selecciona el algoritmo para calcular la predicción.')
+    tipo_modelo = st.selectbox('Modelo para predecir', ['Red neuronal (MLP)', 'Random Forest'])
     with st.form('passenger_form'):
         a,b = st.columns(2)
         with a:
@@ -123,7 +133,7 @@ elif page == 'Predicción':
         submitted = st.form_submit_button('Calcular predicción', type='primary')
     if submitted:
         try:
-            model, counts, n = load_model()
+            model, counts, n = load_model(tipo_modelo)
             row = {'PassengerId':'9999_01','HomePlanet':home,'CryoSleep':'TRUE' if cryo else 'FALSE',
                    'Cabin':f'{deck}/{int(cabin_num)}/{side}','Destination':destination,
                    'Age':int(age),'VIP':'TRUE' if vip else 'FALSE','Name':'Pasajero Simulado', **spends}
@@ -133,7 +143,7 @@ elif page == 'Predicción':
             st.success('Resultado estimado: TRANSPORTADO' if probability >= .5 else 'Resultado estimado: NO TRANSPORTADO')
             st.metric('Probabilidad estimada de transporte', f'{probability:.1%}')
             st.progress(probability)
-            st.caption(f'Modelo entrenado con {n:,} registros. Predicción orientativa, no un resultado verificado.')
+            st.caption(f'Algoritmo: {tipo_modelo}. Modelo entrenado con {n:,} registros. La salida es una estimación, no una certeza.')
         except (OSError, ValueError, KeyError) as err:
             st.error(f'No fue posible realizar la predicción: {err}')
 
@@ -164,4 +174,4 @@ elif page == 'Resultados':
 else:
     st.title('Acerca del proyecto')
     st.markdown('''<div class="gold-card"><strong>Institución:</strong> Universidad Nacional Autónoma de México — F.E.S. Acatlán<br><strong>Asignatura:</strong> Sistemas Inteligentes<br><strong>Tarea:</strong> REDES NEURONALES<br><strong>Profesor:</strong> Mendoza Villar José Ricardo<br><strong>Alumno:</strong> González Reyes Esteban</div>''', unsafe_allow_html=True)
-    st.markdown('''La aplicación usa Python, Streamlit y Scikit-learn para preparar variables, entrenar un clasificador Random Forest y presentar predicciones y métricas. Para que el contenido técnico coincida plenamente con el tema «Redes Neuronales», se necesitará incorporar un modelo neuronal, por ejemplo `MLPClassifier`.''')
+    st.markdown('''La aplicación utiliza Python, Streamlit y Scikit-learn para entrenar y comparar Random Forest y una red neuronal MLP de dos capas ocultas (64 y 32 neuronas), con predicciones y métricas de validación.''')

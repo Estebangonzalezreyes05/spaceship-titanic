@@ -11,6 +11,7 @@ from sklearn.compose import ColumnTransformer
 from sklearn.impute import SimpleImputer
 from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.neural_network import MLPClassifier
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, ConfusionMatrixDisplay, classification_report
 from sklearn.model_selection import train_test_split
 from sklearn.pipeline import Pipeline
@@ -72,7 +73,11 @@ def run(data_dir, output_dir):
     models={
         'regresion_logistica':make_model(LogisticRegression(max_iter=1200,random_state=42)),
         'random_forest':make_model(RandomForestClassifier(n_estimators=250,min_samples_leaf=2,
-                                                         n_jobs=-1,random_state=42))
+                                                         n_jobs=-1,random_state=42)),
+        'red_neuronal_mlp':make_model(MLPClassifier(hidden_layer_sizes=(64,32), activation='relu',
+                                                    solver='adam', alpha=0.001, batch_size=128,
+                                                    max_iter=250, early_stopping=True,
+                                                    n_iter_no_change=15, random_state=42))
     }
     metrics={}
     for name,model in models.items():

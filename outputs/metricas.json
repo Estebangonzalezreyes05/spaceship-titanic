@@ -11,9 +11,15 @@
       "precision": 0.8135802469135802,
       "recall": 0.7707602339181286,
       "f1": 0.7915915915915915
+    },
+    "red_neuronal_mlp": {
+      "accuracy": 0.7960023515579071,
+      "precision": 0.8038277511961722,
+      "recall": 0.7859649122807018,
+      "f1": 0.794795978710822
     }
   },
-  "seleccionado": "random_forest",
+  "seleccionado": "red_neuronal_mlp",
   "filas_train_pdf": 8505,
   "filas_test_pdf": 4185
 }
